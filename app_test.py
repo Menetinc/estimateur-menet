@@ -338,7 +338,7 @@ elif st.session_state.choix_service == "montage":
     
     # 2. Le panneau s'active UNIQUEMENT si le mot de passe est exact
     # (Remplace 'MonMotDePasseSecret123' par le mot de passe de ton choix)
-    if code_admin == 'MonMotDePasseSecret123':
+    if code_admin == 'MonSimpass123@':
         st.success("Accès Directeur des opérations validé")
         
         if st.checkbox("Afficher l'analyse interne", key="sec_mon"):
