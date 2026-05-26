@@ -332,16 +332,11 @@ elif st.session_state.choix_service == "montage":
             else: st.error("⚠️ Erreur SMTP.")
 
     st.write("---")
-    
-    # 1. On affiche UNIQUEMENT la zone de texte pour le mot de passe
     code_admin = st.text_input("🔑 Zone réservée (Administration)", type="password")
     
-    # 2. Les calculs s'activent UNIQUEMENT si le mot de passe est exactement le bon
-    # (Remplace 'NettoyageQuebec2026' par ton vrai mot de passe)
     if code_admin == 'NettoyageQuebec2026':
         st.success("Accès Directeur des opérations validé")
         st.write("### 🧠 Analyse Interne du Montage")
-        
         if "Commercial" in type_secteur:
             col1, col2 = st.columns(2)
             with col1:
