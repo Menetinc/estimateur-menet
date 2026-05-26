@@ -34,7 +34,7 @@ def envoyer_courriel_nettoyage(nom, courriel, tel, superficie, frequence, heures
     serveur_smtp = "smtp.hostinger.com"
     port_smtp = 465  
     expediteur = "contact@menet.ca"
-    mot_de_passe = "2!smch?pYqfg9TLoH78VG245H"
+    mot_de_passe = st.secrets["MOT_DE_PASSE_SMTP"]
     destinataire = "contact@menet.ca"
 
     message = MIMEMultipart()
@@ -77,7 +77,7 @@ def envoyer_courriel_montage(nom, courriel, tel, type_montage, détails_meubles,
     serveur_smtp = "smtp.hostinger.com"
     port_smtp = 465  
     expediteur = "contact@menet.ca"
-    mot_de_passe = "2!smch?pYqfg9TLoH78VG245H"
+    mot_de_passe = st.secrets["MOT_DE_PASSE_SMTP"]
     destinataire = "contact@menet.ca"
 
     message = MIMEMultipart()
