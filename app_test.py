@@ -332,18 +332,27 @@ elif st.session_state.choix_service == "montage":
             else: st.error("⚠️ Erreur SMTP.")
 
     st.write("---")
-    if st.checkbox("🔑 Panneau secret (Directeur des opérations)", key="sec_mon"):
-        st.write("### 🧠 Analyse Interne du Montage")
-        if "Commercial" in type_secteur:
-            col1, col2 = st.columns(2)
-            with col1:
-                st.metric("⏱️ TEMPS DE MAIN-D'ŒUVRE", f"{temps_total_main_doeuvre:.2f} heures")
-                st.metric("💰 COÛT HORAIRE (55$/h)", f"{cout_main_doeuvre:,.2f} $")
-            with col2:
-                st.metric("🚚 FRAIS DÉPLACEMENT", f"{frais_deplacement:.2f} $")
-                st.metric("📊 FACTURE CLIENT TOTAL", f"{prix_total:,.2f} $")
-        else:
-            st.markdown(f"- **Régime :** Tarification Forfaitaire Résidentielle")
-            if prix_total == 60.0 and calcul_fixe < 60.0:
-                st.info("ℹ️ Note : Le montant a été haussé au minimum de déplacement résidentiel de 60.00 $.")
-            st.markdown(f"- **PRIX TOTAL ESTIMÉ :** **`{prix_total:,.2f} $ CAD`** *(plus taxes)*")
+    
+    # 1. On affiche d'abord la zone de texte pour entrer le mot de passe
+    code_admin = st.text_input("🔑 Zone réservée (Administration)", type="password")
+    
+    # 2. Le panneau s'active UNIQUEMENT si le mot de passe est exact
+    # (Remplace 'MonMotDePasseSecret123' par le mot de passe de ton choix)
+    if code_admin == 'MonMotDePasseSecret123':
+        st.success("Accès Directeur des opérations validé")
+        
+        if st.checkbox("Afficher l'analyse interne", key="sec_mon"):
+            st.write("### 🧠 Analyse Interne du Montage")
+            if "Commercial" in type_secteur:
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.metric("⏱️ TEMPS DE MAIN-D'ŒUVRE", f"{temps_total_main_doeuvre:.2f} heures")
+                    st.metric("💰 COÛT HORAIRE (55$/h)", f"{cout_main_doeuvre:,.2f} $")
+                with col2:
+                    st.metric("🚚 FRAIS DÉPLACEMENT", f"{frais_deplacement:.2f} $")
+                    st.metric("📊 FACTURE CLIENT TOTAL", f"{prix_total:,.2f} $")
+            else:
+                st.markdown(f"- **Régime :** Tarification Forfaitaire Résidentielle")
+                if prix_total == 60.0 and calcul_fixe < 60.0:
+                    st.info("ℹ️ Note : Le montant a été haussé au minimum de déplacement résidentiel de 60.00 $.")
+                st.markdown(f"- **PRIX TOTAL ESTIMÉ :** **`{prix_total:,.2f} $ CAD`** *(plus taxes)*")
