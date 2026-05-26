@@ -6,7 +6,22 @@ from email.mime.multipart import MIMEMultipart
 # 1. Configuration de la page
 st.set_page_config(page_title="Ménet Inc. - Estimateur officiel", page_icon="🏢", layout="centered")
 
-# --- STYLE CSS UNIFIÉ (FOND BLANC, BLEU ROYAL, NETTOYAGE DES INSTRUCTIONS) ---
+# --- INITIALISATION DES TARIFS EN ARRIÈRE-PLAN ---
+if "tarifs" not in st.session_state:
+    st.session_state.tarifs = {
+        "taux_nettoyage": 42.00,
+        "taux_montage_comm": 55.00,
+        "frais_dep_comm": 70.00,
+        "min_dep_res": 60.00,
+        "lit": 50.00,
+        "commode": 60.00,
+        "pax": 80.00,
+        "table": 45.00,
+        "meuble_tv": 50.00,
+        "sofa": 30.00
+    }
+
+# --- STYLE CSS UNIFIÉ ---
 st.markdown("""
     <style>
         .stApp { background-color: #ffffff; }
@@ -16,7 +31,6 @@ st.markdown("""
             border: 1px solid #007bff; border-radius: 8px; font-weight: bold; font-family: sans-serif;
             box-shadow: 0 4px 6px rgba(0, 123, 255, 0.2);
         }
-        /* Supprime définitivement la mention grise sous tous les champs des formulaires */
         div[data-testid="stForm"] [data-testid="InputInstructions"] {
             display: none !important;
         }
@@ -58,10 +72,10 @@ def envoyer_courriel_nettoyage(nom, courriel, tel, superficie, frequence, heures
     - Escaliers : {escaliers} cage(s) sur {etages} étage(s)
     - Options : Cafétéria({cafeteria}), Gym({gym}), Formation({formation}), Lounge({lounge}), Allaitement({allaitement}), Déchets({dechets}), Ascenseur({ascenseur})
 
-    🧠 OPÉRATIONS (SECRET) :
+    🧠 OPÉRATIONS (DYNAMIQUE) :
     - Temps requis : {heures:.2f} h / jour (Marge 20% incluse)
-    - Tarif : 42.00 $ / h
-    💰 PRIX MENSUEL SUGGÉRÉ : {prix:,.2f} $ CAD / mois (Plus taxes)
+    - Tarif appliqué au moment de l'envoi : {st.session_state.tarifs['taux_nettoyage']:.2f} $ / h
+    💰 PRIX MENSUEL ESTIMÉ DU PANNEAU : {prix:,.2f} $ CAD / mois (Plus taxes)
     """
     message.attach(MIMEText(corps, "plain", "utf-8"))
     try:
@@ -86,9 +100,9 @@ def envoyer_courriel_montage(nom, courriel, tel, type_montage, détails_meubles,
     message["Subject"] = f"🚨 DEVIS MONTAGE DE MEUBLES ({type_montage.upper()}) - {nom}"
 
     if type_montage == "Commercial":
-        heures_texte = f"- Main-d'œuvre estimée : {temps_total_h:.2f} heures\n- Coût main-d'œuvre ({temps_total_h:.2f} h x 55$) : {cout_mo:.2f} $\n- Frais de déplacement fixe : {frais_dep:.2f} $"
+        heures_texte = f"- Main-d'œuvre estimée : {temps_total_h:.2f} heures\n- Coût main-d'œuvre ({temps_total_h:.2f} h x {st.session_state.tarifs['taux_montage_comm']:.2f}$) : {cout_mo:.2f} $\n- Frais de déplacement appliqué : {frais_dep:.2f} $"
     else:
-        heures_texte = f"- Facturation : Prix fixes résidentiels\n- Note : Minimum de déplacement de 60$ appliqué si inférieur."
+        heures_texte = f"- Facturation : Prix fixes résidentiels configurés\n- Note : Minimum de déplacement de {st.session_state.tarifs['min_dep_res']:.2f}$ appliqué si inférieur."
 
     corps = f"""
     Bonjour Omar,
@@ -101,10 +115,10 @@ def envoyer_courriel_montage(nom, courriel, tel, type_montage, détails_meubles,
     📦 INVENTAIRE DES MEUBLES :
     {détails_meubles}
     
-    🧠 ANALYSE ET TARIFICATION (SECRET) :
+    🧠 ANALYSE ET TARIFICATION (DYNAMIQUE) :
     {heures_texte}
 
-    💰 PRIX TOTAL SUGGÉRÉ : {prix_estimé:,.2f} $ CAD (Plus taxes)
+    💰 PRIX TOTAL ESTIMÉ DU PANNEAU : {prix_estimé:,.2f} $ CAD (Plus taxes)
     """
     message.attach(MIMEText(corps, "plain", "utf-8"))
     try:
@@ -194,7 +208,7 @@ if st.session_state.choix_service == "nettoyage":
 
         soumettre_nettoyage = st.form_submit_button("🚀 Transmettre ma demande Nettoyage", use_container_width=True, type="primary")
 
-    # Moteur de calculs opérationnels
+    # MOTEUR DE CALCUL PLACÉ AVANT L'ENVOI POUR S'ASSURER QUE LE COURRIEL REÇOIVE LES BONS PRIX
     jours_par_semaine = 1
     if "Bihebdomadaire" in frequence_label: jours_par_semaine = 2
     elif "3 jours" in frequence_label: jours_par_semaine = 3
@@ -209,35 +223,44 @@ if st.session_state.choix_service == "nettoyage":
 
     heures_par_jour = ((minutes_base + minutes_elements + minutes_options) * 1.20) / 60
     visites_par_mois = jours_par_semaine * 4.33
-    prix_mensuel_secret = (heures_par_jour * visites_par_mois) * 42
+    prix_mensuel_secret = (heures_par_jour * visites_par_mois) * st.session_state.tarifs["taux_nettoyage"]
 
     if soumettre_nettoyage:
         total_zones = nb_bureaux + nb_lavage + nb_toilettes + nb_conferences + nb_vestiaires + nb_halls + nb_escaliers
-        
         if not nom_client or not courriel_client or not tel_client:
             st.error("❌ Veuillez remplir vos coordonnées.")
         elif superficie == 0 and total_zones == 0:
             st.error("❌ Veuillez sélectionner au moins 1 zone ou entrer une superficie.")
         else:
             with st.spinner("Transmission..."):
+                # Le calcul prend maintenant la valeur exacte de st.session_state.tarifs["taux_nettoyage"]
                 succes = envoyer_courriel_nettoyage(nom_client, courriel_client, tel_client, superficie, frequence_label, heures_par_jour, prix_mensuel_secret, nb_bureaux, nb_toilettes, nb_vestiaires, nb_lavage, nb_conferences, nb_halls, nb_escaliers, nb_etages_escalier, has_cafeteria, has_gym, has_formation, has_lounge, has_allaitement, has_dechets, has_ascenseur, commentaire_client)
-            if succes: st.success("🏢 **Demande transmise avec succès !** Notre équipe étudie vos données et vous contactera sous peu.")
+            if succes: st.success("🏢 **Demande transmise avec succès !**")
             else: st.error("⚠️ Erreur SMTP.")
 
     st.write("---")
     
-    # SÉCURITÉ AJOUTÉE POUR LE NETTOYAGE
+    # ESPACE ADMIN DU NETTOYAGE
     code_admin_net = st.text_input("🔑 Zone réservée (Administration)", type="password", key="pass_net")
     if code_admin_net == 'NettoyageQuebec2026':
         st.success("Accès Directeur des opérations validé")
-        st.write("### 🧠 Analyse Interne du Nettoyage")
-        col1, col2 = st.columns(2)
-        with col1:
-            st.metric("⏱️ TEMPS REQUIS / VISITE", f"{heures_par_jour:.2f} heures")
-            st.metric("📅 FRÉQUENCE MENSUELLE", f"{visites_par_mois:.1f} visites / mois")
-        with col2:
-            st.metric("💰 TAUX HORAIRE APPLIQUÉ", "42.00 $ / h")
-            st.metric("📊 FACTURATION MENSUELLE", f"{prix_mensuel_secret:,.2f} $ / mois")
+        
+        tab_analyse, tab_config = st.tabs(["📊 Analyse Client", "⚙️ Configuration des Tarifs"])
+        
+        with tab_analyse:
+            st.write("### 🧠 Analyse Interne du Nettoyage")
+            col1, col2 = st.columns(2)
+            with col1:
+                st.metric("⏱️ TEMPS REQUIS / VISITE", f"{heures_par_jour:.2f} heures")
+                st.metric("📅 FRÉQUENCE MENSUELLE", f"{visites_par_mois:.1f} visites / mois")
+            with col2:
+                st.metric("💰 TAUX HORAIRE APPLIQUÉ", f"{st.session_state.tarifs['taux_nettoyage']:.2f} $ / h")
+                st.metric("📊 FACTURATION MENSUELLE", f"{prix_mensuel_secret:,.2f} $ / mois")
+                
+        with tab_config:
+            st.write("### 🛠️ Modifier les prix en arrière-plan")
+            st.session_state.tarifs["taux_nettoyage"] = st.number_input("Taux horaire Nettoyage ($/h) :", value=st.session_state.tarifs["taux_nettoyage"], step=1.0)
+            st.info("💡 Les modifications s'appliquent immédiatement à toutes les simulations en cours.")
 
 
 # --- VUE 2 : FORMULAIRE MONTAGE DE MEUBLES ---
@@ -255,8 +278,6 @@ elif st.session_state.choix_service == "montage":
     with st.form("form_montage_complet"):
         if type_secteur == "Commercial (Bureaux, Commerces)":
             st.markdown("#### 🏢 Mobilier Commercial")
-            st.info("💡 Sélectionnez les quantités requises pour votre projet afin de générer votre estimation.")
-            
             cm1, cm2 = st.columns(2)
             with cm1:
                 q_bureau_std = st.number_input("Bureau de travail standard :", min_value=0, value=0, step=1)
@@ -269,8 +290,10 @@ elif st.session_state.choix_service == "montage":
             
             min_totale = (q_bureau_std * 45 * 1) + (q_bureau_dir * 60 * 2) + (q_table_conf * 90 * 2) + (q_chaise_bur * 15 * 1) + (q_armoire_cl * 45 * 2) + (q_comptoir * 120 * 2)
             temps_total_main_doeuvre = min_totale / 60
-            cout_main_doeuvre = temps_total_main_doeuvre * 55.0
-            if min_totale > 0: frais_deplacement = 70.0
+            
+            # Lié dynamiquement au panneau de contrôle
+            cout_main_doeuvre = temps_total_main_doeuvre * st.session_state.tarifs["taux_montage_comm"]
+            if min_totale > 0: frais_deplacement = st.session_state.tarifs["frais_dep_comm"]
             prix_total = cout_main_doeuvre + frais_deplacement
             
             if q_bureau_std > 0: détails_meubles += f"- {q_bureau_std}x Bureau standard\n"
@@ -281,8 +304,6 @@ elif st.session_state.choix_service == "montage":
             if q_comptoir > 0: détails_meubles += f"- {q_comptoir}x Comptoir d'accueil\n"
         else:
             st.markdown("#### 🏠 Mobilier Résidentiel")
-            st.info("💡 Tarifs forfaitaires transparents par meuble. Déplacement minimum de 60 $ requis.")
-            
             cr1, cr2 = st.columns(2)
             with cr1:
                 q_lit = st.number_input("Lit complet / Base de lit :", min_value=0, value=0, step=1)
@@ -297,9 +318,18 @@ elif st.session_state.choix_service == "montage":
                 st.write("")
                 q_sofa = st.number_input("Sofa / Divan sectionnel :", min_value=0, value=0, step=1)
             
-            calcul_fixe = (q_lit * 50) + (q_commode * 60) + (q_pax * 80) + (q_table_res * 45) + (q_meuble_tv * 50) + (q_sofa * 30)
-            if calcul_fixe > 0 and calcul_fixe < 60.0: prix_total = 60.0
-            else: prix_total = float(calcul_fixe)
+            # Calcul basé sur la liste de prix dynamiques résidentiels
+            calcul_fixe = ((q_lit * st.session_state.tarifs["lit"]) + 
+                           (q_commode * st.session_state.tarifs["commode"]) + 
+                           (q_pax * st.session_state.tarifs["pax"]) + 
+                           (q_table_res * st.session_state.tarifs["table"]) + 
+                           (q_meuble_tv * st.session_state.tarifs["meuble_tv"]) + 
+                           (q_sofa * st.session_state.tarifs["sofa"]))
+            
+            if calcul_fixe > 0 and calcul_fixe < st.session_state.tarifs["min_dep_res"]: 
+                prix_total = st.session_state.tarifs["min_dep_res"]
+            else: 
+                prix_total = float(calcul_fixe)
                 
             if q_lit > 0: détails_meubles += f"- {q_lit}x Lit / Base de lit\n"
             if q_commode > 0: détails_meubles += f"- {q_commode}x Commode à tiroirs\n"
@@ -309,7 +339,7 @@ elif st.session_state.choix_service == "montage":
             if q_sofa > 0: détails_meubles += f"- {q_sofa}x Sofa / Sectionnel\n"
 
         st.markdown("#### 📝 Précisions particulières")
-        commentaire_montage = st.text_area("Indiquez la marque des meubles ou des contraintes d'accès :", placeholder="Ex: Modèle IKEA PAX...")
+        commentaire_montage = st.text_area("Indiquez la marque des meubles...", placeholder="Ex: Modèle IKEA PAX...")
 
         st.markdown("#### 📧 Coordonnées")
         cco_m1, cco_m2, cco_m3 = st.columns(3)
@@ -327,27 +357,42 @@ elif st.session_state.choix_service == "montage":
         else:
             type_label = "Commercial" if "Commercial" in type_secteur else "Résidentiel"
             with st.spinner("Transmission..."):
+                # Prise en compte immédiate des prix modifiés dans le courriel de montage
                 succes = envoyer_courriel_montage(nom_client, courriel_client, tel_client, type_label, détails_meubles, prix_total, commentaire_montage, temps_total_main_doeuvre, cout_main_doeuvre, frais_deplacement)
-            if succes: st.success("🏢 **Demande transmise avec succès !** Notre équipe étudie vos données et vous contactera sous peu.")
+            if succes: st.success("🏢 **Demande transmise avec succès !**")
             else: st.error("⚠️ Erreur SMTP.")
 
     st.write("---")
     
-    # SÉCURITÉ DU MONTAGE
+    # ESPACE ADMIN DU MONTAGE
     code_admin_mon = st.text_input("🔑 Zone réservée (Administration)", type="password", key="pass_mon")
     if code_admin_mon == 'NettoyageQuebec2026':
         st.success("Accès Directeur des opérations validé")
-        st.write("### 🧠 Analyse Interne du Montage")
-        if "Commercial" in type_secteur:
-            col1, col2 = st.columns(2)
-            with col1:
-                st.metric("⏱️ TEMPS DE MAIN-D'ŒUVRE", f"{temps_total_main_doeuvre:.2f} heures")
-                st.metric("💰 COÛT HORAIRE (55$/h)", f"{cout_main_doeuvre:,.2f} $")
-            with col2:
-                st.metric("🚚 FRAIS DÉPLACEMENT", f"{frais_deplacement:.2f} $")
-                st.metric("📊 FACTURE CLIENT TOTAL", f"{prix_total:,.2f} $")
-        else:
-            st.markdown(f"- **Régime :** Tarification Forfaitaire Résidentielle")
-            if prix_total == 60.0 and calcul_fixe < 60.0:
-                st.info("ℹ️ Note : Le montant a été haussé au minimum de déplacement résidentiel de 60.00 $.")
-            st.markdown(f"- **PRIX TOTAL ESTIMÉ :** **`{prix_total:,.2f} $ CAD`** *(plus taxes)*")
+        
+        tab_analyse_m, tab_config_m = st.tabs(["📊 Analyse Client", "⚙️ Configuration des Tarifs"])
+        
+        with tab_analyse_m:
+            st.write("### 🧠 Analyse Interne du Montage")
+            if "Commercial" in type_secteur:
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.metric("⏱️ TEMPS DE MAIN-D'ŒUVRE", f"{temps_total_main_doeuvre:.2f} heures")
+                    st.metric("💰 COÛT HORAIRE", f"{st.session_state.tarifs['taux_montage_comm']:.2f} $ / h")
+                with col2:
+                    st.metric("🚚 FRAIS DÉPLACEMENT", f"{frais_deplacement:.2f} $")
+                    st.metric("📊 FACTURE CLIENT TOTAL", f"{prix_total:,.2f} $")
+            else:
+                st.markdown(f"- **Régime :** Tarification Forfaitaire Résidentielle")
+                st.markdown(f"- **PRIX TOTAL ESTIMÉ :** **`{prix_total:,.2f} $ CAD`**")
+                
+        with tab_config_m:
+            st.write("### 🛠️ Configuration des prix de Montage")
+            c_cfg1, c_cfg2 = st.columns(2)
+            with c_cfg1:
+                st.session_state.tarifs["taux_montage_comm"] = st.number_input("Taux horaire Commercial ($/h) :", value=st.session_state.tarifs["taux_montage_comm"], step=1.0)
+                st.session_state.tarifs["frais_dep_comm"] = st.number_input("Déplacement Commercial ($) :", value=st.session_state.tarifs["frais_dep_comm"], step=5.0)
+                st.session_state.tarifs["min_dep_res"] = st.number_input("Minimum Déplacement Résidentiel ($) :", value=st.session_state.tarifs["min_dep_res"], step=5.0)
+            with c_cfg2:
+                st.session_state.tarifs["lit"] = st.number_input("Forfait Lit ($) :", value=st.session_state.tarifs["lit"], step=5.0)
+                st.session_state.tarifs["pax"] = st.number_input("Forfait PAX ($) :", value=st.session_state.tarifs["pax"], step=5.0)
+                st.session_state.tarifs["commode"] = st.number_input("Forfait Commode ($) :", value=st.session_state.tarifs["commode"], step=5.0)
