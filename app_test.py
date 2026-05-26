@@ -149,7 +149,6 @@ if st.session_state.choix_service == "nettoyage":
         st.markdown("#### 📐 Dimensions et Fréquence")
         c_dim1, c_dim2 = st.columns(2)
         with c_dim1:
-            # Remis à 0 par défaut
             superficie = st.number_input("Superficie totale (en pieds carrés) :", min_value=0, value=0, step=100)
         with c_dim2:
             frequence_label = st.selectbox("Fréquence du nettoyage :", ["Hebdomadaire (1 jour / semaine)", "Bihebdomadaire (2 jours / semaine)", "3 jours / semaine", "4 jours / semaine", "5 jours / semaine", "6 jours / semaine", "7 jours / semaine (7/7)"])
@@ -157,11 +156,9 @@ if st.session_state.choix_service == "nettoyage":
         st.markdown("#### 🔢 Nombre de zones et d'équipements")
         cz1, cz2, cz3 = st.columns(3)
         with cz1:
-            # Remis à 0 par défaut
             nb_bureaux = st.number_input("1. Nombre de bureaux :", min_value=0, value=0, step=1)
             nb_lavage = st.number_input("4. Stations lavage mains :", min_value=0, value=0, step=1)
         with cz2:
-            # Remis à 0 par défaut
             nb_toilettes = st.number_input("2. Toilettes communes :", min_value=0, value=0, step=1)
             nb_conferences = st.number_input("5. Salles de conférence :", min_value=0, value=0, step=1)
         with cz3:
@@ -215,7 +212,6 @@ if st.session_state.choix_service == "nettoyage":
     prix_mensuel_secret = (heures_par_jour * visites_par_mois) * 42
 
     if soumettre_nettoyage:
-        # Calcule si le client a laissé tout le questionnaire vide
         total_zones = nb_bureaux + nb_lavage + nb_toilettes + nb_conferences + nb_vestiaires + nb_halls + nb_escaliers
         
         if not nom_client or not courriel_client or not tel_client:
@@ -229,7 +225,11 @@ if st.session_state.choix_service == "nettoyage":
             else: st.error("⚠️ Erreur SMTP.")
 
     st.write("---")
-    if st.checkbox("🔑 Panneau secret (Directeur des opérations)", key="sec_net"):
+    
+    # SÉCURITÉ AJOUTÉE POUR LE NETTOYAGE
+    code_admin_net = st.text_input("🔑 Zone réservée (Administration)", type="password", key="pass_net")
+    if code_admin_net == 'NettoyageQuebec2026':
+        st.success("Accès Directeur des opérations validé")
         st.write("### 🧠 Analyse Interne du Nettoyage")
         col1, col2 = st.columns(2)
         with col1:
@@ -332,9 +332,10 @@ elif st.session_state.choix_service == "montage":
             else: st.error("⚠️ Erreur SMTP.")
 
     st.write("---")
-    code_admin = st.text_input("🔑 Zone réservée (Administration)", type="password")
     
-    if code_admin == 'NettoyageQuebec2026':
+    # SÉCURITÉ DU MONTAGE
+    code_admin_mon = st.text_input("🔑 Zone réservée (Administration)", type="password", key="pass_mon")
+    if code_admin_mon == 'NettoyageQuebec2026':
         st.success("Accès Directeur des opérations validé")
         st.write("### 🧠 Analyse Interne du Montage")
         if "Commercial" in type_secteur:
